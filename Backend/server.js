@@ -14,13 +14,13 @@ app.use(express.json());
 // ==========================================
 
 const AUTH_URL = 'http://38.242.218.46/iToken/api/Clients/clientAuthentication'; 
+const API_ENDPOINT = 'http://38.242.218.46/iToken/api/digipass/getCrontoCode';
+const VALIDATE_ENDPOINT = 'http://38.242.218.46/iToken/api/digipass/signatureValidator';
 
 const AUTH_PAYLOAD = {
   secret_key: "2222222222222222",
   password: "password1"
 };
-
-const API_ENDPOINT = 'http://38.242.218.46/iToken/api/digipass/getCrontoCode';
 
 // ==========================================
 // 2. HELPER: GET TOKEN
@@ -34,7 +34,6 @@ async function getAuthToken() {
     });
 
     const data = response.data;
-    // Check for success code "0" and return the token from respMsg
     if (data.respCode !== "0") {
       throw new Error(`Auth failed: ${data.msgType}`);
     }
@@ -75,13 +74,12 @@ app.post('/api/activate', async (req, res) => {
   }
 });
 
-// --- ROUTE B: TRANSACTION SIGNING ---
+// --- ROUTE B: TRANSACTION SIGNING (GENERATION) ---
 app.post('/api/sign', async (req, res) => {
   try {
     const { origin, beneficiary, name, amount } = req.body;
     const token = await getAuthToken();
 
-   
     const dataArray = [
       String(origin),
       String(beneficiary),
@@ -89,11 +87,9 @@ app.post('/api/sign', async (req, res) => {
       String(amount)
     ];
 
-    
     const transactionPayload = {
-     
       cronto_type: "Transaction",
-      datafields: dataArray,      
+      datafields: dataArray,       
       fingerprint: "test111111111111" 
     };
 
@@ -104,10 +100,36 @@ app.post('/api/sign', async (req, res) => {
     });
 
     console.log("> Success! Transaction Signature received.");
-    
-    
-    console.log("Response Data:", JSON.stringify(response.data, null, 2));
-    
+    res.json(response.data);
+
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+// --- ROUTE C: SIGNATURE VALIDATION ---
+app.post('/api/validate-signature', async (req, res) => {
+  try {
+    const { signature, datafield } = req.body;
+    const token = await getAuthToken();
+
+    // Mapping the data to exactly what your validator endpoint expects
+    const validationPayload = {
+      user_id: "111111111", // Or use the dynamic ID from the frontend
+      signature: signature,
+      datafield: datafields // Array of the transaction details
+    };
+
+    console.log(`3. Validating signature: ${signature}...`);
+
+    const response = await axios.post(VALIDATE_ENDPOINT, validationPayload, {
+      headers: { 
+        'Authorization': `Bearer ${token}`, 
+        'Content-Type': 'application/json' 
+      }
+    });
+
+    console.log("Validation Result:", response.data.respMsg);
     res.json(response.data);
 
   } catch (error) {

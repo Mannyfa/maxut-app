@@ -51,17 +51,25 @@ const DeviceActivation = () => {
   const [error, setError] = useState(null);
   const [timeLeft, setTimeLeft] = useState(30);
 
+  useEffect(() => {
+    let timer;
+    if (generatedImage && timeLeft > 0) {
+      timer = setInterval(() => {
+        setTimeLeft((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [generatedImage, timeLeft]); 
+
   const handleGenerate = async () => {
     setIsLoading(true);
     setError(null);
     setGeneratedImage(null);
-
+    setTimeLeft(30); 
     try {
       const response = await fetch('http://localhost:5000/api/activate', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: userId }), 
       });
 
@@ -71,9 +79,8 @@ const DeviceActivation = () => {
         throw new Error(data.ret_msg || 'Activation failed');
       }
 
-      setGeneratedImage(data.cronto_image || data.respMsg); // Adjust based on your API key
-      setTimeLeft(30);
-
+      setGeneratedImage(data.cronto_image || data.respMsg);
+      
     } catch (err) {
       console.error(err);
       setError(err.message || "Network Error");
@@ -86,6 +93,7 @@ const DeviceActivation = () => {
     setUserId('');
     setGeneratedImage(null);
     setError(null);
+    setTimeLeft(30);
   };
 
   return (
@@ -103,15 +111,8 @@ const DeviceActivation = () => {
               type="text"
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
-              className="w-full border border-gray-300 rounded px-4 py-2 text-gray-700 focus:outline-none focus:border-[#005f5f] focus:ring-1 focus:ring-[#005f5f]"
+              className="w-full border border-gray-300 rounded px-4 py-2 text-gray-700 focus:outline-none focus:border-[#005f5f]"
             />
-          </div>
-
-          <div className="bg-blue-50 border border-blue-100 rounded p-4 flex gap-3">
-            <Lock className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-blue-800 leading-relaxed">
-              Generating this code will send a synchronization SMS to the registered mobile number associated with this User ID.
-            </p>
           </div>
 
           <div className="pt-2 flex flex-col items-center gap-4">
@@ -125,15 +126,8 @@ const DeviceActivation = () => {
               {isLoading ? "Processing..." : "Generate Activation Code"}
             </button>
             
-            {error && (
-              <div className="text-red-600 text-xs bg-red-50 p-2 rounded w-full border border-red-100 text-center">
-                {error}
-              </div>
-            )}
-
-            <button onClick={handleClear} className="text-gray-500 text-sm underline hover:text-gray-700">
-              Clear Form
-            </button>
+            {error && <div className="text-red-600 text-xs bg-red-50 p-2 rounded w-full border border-red-100 text-center">{error}</div>}
+            <button onClick={handleClear} className="text-gray-500 text-sm underline hover:text-gray-700">Clear Form</button>
           </div>
         </div>
       </div>
@@ -146,17 +140,20 @@ const DeviceActivation = () => {
           </div>
         ) : (
           <div className="flex flex-col items-center animate-in fade-in duration-500">
-            <div className="p-3 bg-white border border-gray-200 rounded-lg shadow-sm">
+            <div className={`p-3 bg-white border border-gray-200 rounded-lg shadow-sm transition-opacity duration-1000 ${timeLeft === 0 ? 'opacity-20' : 'opacity-100'}`}>
               <img 
                 src={`data:image/png;base64,${generatedImage}`} 
                 className="w-48 h-48 object-contain" 
                 alt="Activation Token"
               />
             </div>
-            <p className="mt-6 text-sm font-bold text-gray-800">Scan with Rayan eToken App</p>
-            <div className="mt-3 bg-red-50 text-red-600 text-xs px-4 py-1 rounded-full border border-red-100 font-mono">
+            <p className="mt-6 text-sm font-bold text-gray-800">Scan with eToken App</p>
+            <div className={`mt-3 px-4 py-1 rounded-full border font-mono text-xs ${timeLeft <= 5 ? 'bg-red-50 text-red-600 border-red-100' : 'bg-green-50 text-green-700 border-green-100'}`}>
               Expires in {timeLeft} s
             </div>
+            {timeLeft === 0 && (
+               <p className="text-red-500 text-[10px] mt-2 font-bold uppercase tracking-tighter">Code Expired. Please regenerate.</p>
+            )}
           </div>
         )}
       </div>
@@ -164,6 +161,7 @@ const DeviceActivation = () => {
   );
 };
 
+// --- TAB 2: Transaction Signing ---
 const TransactionSigning = () => {
   const [step, setStep] = useState('form'); 
   const [formData, setFormData] = useState({
@@ -180,9 +178,6 @@ const TransactionSigning = () => {
   const [signatureCode, setSignatureCode] = useState("");
   const [validationResult, setValidationResult] = useState(null);
 
-  const CORRECT_PIN = "675344"; // Your hardcoded validation value
-
-  // --- TIMER LOGIC ---
   useEffect(() => {
     let timer;
     if (step === 'display' && timeLeft > 0) {
@@ -206,17 +201,15 @@ const TransactionSigning = () => {
       const response = await fetch('http://localhost:5000/api/sign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData), // Sending the 4 fields to your Node backend
+        body: JSON.stringify(formData),
       });
 
       const data = await response.json();
 
-      // Check if the backend or API returned an error
       if (data.ret_code !== 0 && data.ret_code !== "0") {
         throw new Error(data.ret_msg || "An error occurred during signing");
       }
 
-      // Success: Setup display and timer
       setGeneratedImage(data.cronto_image || data.respMsg);
       setTimeLeft(30);
       setStep('display');
@@ -229,13 +222,41 @@ const TransactionSigning = () => {
     }
   };
 
-  const handleValidateSignature = () => {
-    if (signatureCode === CORRECT_PIN) {
-      setValidationResult('success');
-      setError(null);
-    } else {
+  // --- NEW: LIVE VALIDATION LOGIC ---
+  const handleValidateSignature = async () => {
+    setIsLoading(true);
+    setError(null);
+    setValidationResult(null);
+
+    try {
+      const response = await fetch('http://localhost:5000/api/validate-signature', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          signature: signatureCode,
+          datafield: [
+            String(formData.origin),
+            String(formData.beneficiary),
+            String(formData.name),
+            String(formData.amount)
+          ]
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.respCode === "0") {
+        setValidationResult('success');
+      } else {
+        setValidationResult('failed');
+        setError(data.respMsg || "Validation Failed");
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Connection to validation server failed");
       setValidationResult('failed');
-      setError("Validation Failed: Incorrect Code");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -248,7 +269,6 @@ const TransactionSigning = () => {
     setSignatureCode("");
   };
 
-  // --- RENDERING LOGIC ---
   if (step === 'validate') {
     return (
       <div className="w-full max-w-lg mx-auto py-10 animate-in fade-in slide-in-from-right-4 duration-500">
@@ -265,7 +285,13 @@ const TransactionSigning = () => {
                 maxLength={6}
                 className="flex-1 border border-gray-300 rounded px-4 py-2 text-gray-700 focus:outline-none focus:border-[#005f5f]"
               />
-              <button onClick={handleValidateSignature} className="bg-[#005f5f] hover:bg-[#004c4c] text-white font-bold px-6 py-2 rounded shadow-sm transition-all">Validate</button>
+              <button 
+                onClick={handleValidateSignature} 
+                disabled={isLoading}
+                className="bg-[#005f5f] hover:bg-[#004c4c] text-white font-bold px-6 py-2 rounded shadow-sm transition-all disabled:bg-gray-400"
+              >
+                {isLoading ? "Verifying..." : "Validate"}
+              </button>
             </div>
           </div>
           {validationResult === 'success' && (
@@ -346,7 +372,6 @@ const TransactionSigning = () => {
   );
 };
 
-
 // --- Main App Component ---
 export default function App() {
   const [activePage, setActivePage] = useState('Integrator');
@@ -363,7 +388,6 @@ export default function App() {
         </div>
 
         <div className="bg-white rounded-xl shadow-xl border border-gray-200 w-full max-w-5xl overflow-hidden min-h-[600px] flex flex-col">
-          {/* Tab Navigation */}
           <div className="flex border-b border-gray-100 bg-gray-50/50">
             <button
               onClick={() => setActiveTab('activation')}
