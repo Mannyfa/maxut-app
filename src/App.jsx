@@ -67,7 +67,7 @@ const DeviceActivation = () => {
     setGeneratedImage(null);
     setTimeLeft(30); 
     try {
-      const response = await fetch('http://localhost:5000/api/activate', {
+      const response = await fetch('https://maxut-app.vercel.app/api/activate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: userId }), 
@@ -198,7 +198,7 @@ const TransactionSigning = () => {
     setGeneratedImage(null);
 
     try {
-      const response = await fetch('http://localhost:5000/api/sign', {
+      const response = await fetch('https://maxut-app.vercel.app/api/sign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -229,7 +229,7 @@ const TransactionSigning = () => {
     setValidationResult(null);
 
     try {
-      const response = await fetch('http://localhost:5000/api/validate-signature', {
+      const response = await fetch('https://maxut-app.vercel.app/api/validate-signature', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
