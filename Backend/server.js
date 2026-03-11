@@ -90,8 +90,8 @@ app.post('/api/sign', async (req, res) => {
 
     // 2. Payload exactly as requested by the API developer
     const transactionPayload = {
-      user_id: "davidfbnquest",    // The missing key the developer pointed out
-      datafields: dataArray,       // The array of 4 items
+      user_id: "tdsdavid",  
+      datafields: dataArray,      
       cronto_type: "Transaction", 
       fingerprint: "test111111111111" 
     };
