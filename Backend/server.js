@@ -56,8 +56,8 @@ app.post('/api/activate', async (req, res) => {
     const token = await getAuthToken();
 
     const payload = {
-      user_id: user_id,
-      auth_code: "000000246",
+      user_id: "tdsdavid",
+      auth_code: "845728628",
       cronto_type: "Activation"
     };
 
@@ -80,21 +80,31 @@ app.post('/api/sign', async (req, res) => {
     const { origin, beneficiary, name, amount } = req.body;
     const token = await getAuthToken();
 
+    // 1. Array exactly as the API developer tested it
     const dataArray = [
-      String(origin),
-      String(beneficiary),
-      String(name),
-      String(amount)
+      String(origin),      
+      String(beneficiary), 
+      String(name),        
+      String(amount)       
     ];
 
+    // 2. Payload exactly as requested by the API developer
     const transactionPayload = {
-      cronto_type: "Transaction",
-      datafields: dataArray,       
+      user_id: "davidfbnquest",    // The missing key the developer pointed out
+      datafields: dataArray,       // The array of 4 items
+      cronto_type: "Transaction", 
       fingerprint: "test111111111111" 
     };
 
-    console.log(`2. Signing Transaction with data: [${dataArray.join(', ')}]...`);
-    
+    // ==========================================
+    // 🛑 DEBUG LOG: EXACT OUTGOING PAYLOAD
+    // ==========================================
+    console.log("\n================================================");
+    console.log("🚀 EXACT JSON PAYLOAD LEAVING NODE.JS SERVER:");
+    console.log("================================================");
+    console.log(JSON.stringify(transactionPayload, null, 2));
+    console.log("================================================\n");
+
     const response = await axios.post(API_ENDPOINT, transactionPayload, {
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
     });
@@ -113,11 +123,11 @@ app.post('/api/validate-signature', async (req, res) => {
     const { signature, datafield } = req.body;
     const token = await getAuthToken();
 
-    // Mapping the data to exactly what your validator endpoint expects
+    
     const validationPayload = {
-      user_id: "111111111", // Or use the dynamic ID from the frontend
+      user_id: "111111111", 
       signature: signature,
-      datafield: datafields // Array of the transaction details
+      datafield: datafields 
     };
 
     console.log(`3. Validating signature: ${signature}...`);
