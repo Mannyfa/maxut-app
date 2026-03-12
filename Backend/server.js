@@ -52,35 +52,44 @@ async function getAuthToken() {
 // --- ROUTE A: ACTIVATION ---
 app.post('/api/activate', async (req, res) => {
   try {
-    const { user_id } = req.body;
+    // 1. Extract BOTH fields from the frontend request
+    const { user_id, auth_code } = req.body;
     const token = await getAuthToken();
 
+    // 2. Map them dynamically to the payload
     const payload = {
-      user_id: "tdsdavid",
-      auth_code: "845728628",
+      user_id: user_id,
+      auth_code: auth_code, 
       cronto_type: "Activation"
     };
 
-    console.log(`2. Requesting Activation Code for: ${user_id}...`);
+    // ==========================================
+    // 🛑 DEBUG LOG: EXACT OUTGOING PAYLOAD
+    // ==========================================
+    console.log("\n================================================");
+    console.log("📲 EXACT ACTIVATION PAYLOAD LEAVING NODE.JS:");
+    console.log("================================================");
+    console.log(JSON.stringify(payload, null, 2));
+    console.log("================================================\n");
     
     const response = await axios.post(API_ENDPOINT, payload, {
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
     });
 
+    console.log("> Success! Activation Code received.");
     res.json(response.data);
 
   } catch (error) {
     handleError(res, error);
   }
 });
-
 // --- ROUTE B: TRANSACTION SIGNING (GENERATION) ---
 app.post('/api/sign', async (req, res) => {
   try {
     const { origin, beneficiary, name, amount } = req.body;
     const token = await getAuthToken();
 
-    // 1. Array exactly as the API developer tested it
+    
     const dataArray = [
       String(origin),      
       String(beneficiary), 
@@ -88,7 +97,7 @@ app.post('/api/sign', async (req, res) => {
       String(amount)       
     ];
 
-    // 2. Payload exactly as requested by the API developer
+    
     const transactionPayload = {
       user_id: "tdsdavid",  
       datafields: dataArray,      
@@ -120,7 +129,7 @@ app.post('/api/sign', async (req, res) => {
 // --- ROUTE C: SIGNATURE VALIDATION ---
 app.post('/api/validate-signature', async (req, res) => {
   try {
-    const { signature, datafield } = req.body;
+    const { signature, datafields } = req.body;
     const token = await getAuthToken();
 
     

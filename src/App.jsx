@@ -49,7 +49,8 @@ const Footer = () => (
 
 // --- TAB 1: Device Activation ---
 const DeviceActivation = () => {
-  const [userId, setUserId] = useState('111111111');
+  const [userId, setUserId] = useState('tdsdavid'); 
+  const [authCode, setAuthCode] = useState('845728628'); 
   const [generatedImage, setGeneratedImage] = useState(null); 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -71,10 +72,14 @@ const DeviceActivation = () => {
     setGeneratedImage(null);
     setTimeLeft(30); 
     try {
+      
       const response = await fetch('https://maxut-app.vercel.app/api/activate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId }), 
+        body: JSON.stringify({ 
+          user_id: userId, 
+          auth_code: authCode 
+        }), 
       });
 
       const data = await response.json();
@@ -95,6 +100,7 @@ const DeviceActivation = () => {
 
   const handleClear = () => {
     setUserId('');
+    setAuthCode('');
     setGeneratedImage(null);
     setError(null);
     setTimeLeft(30);
@@ -109,6 +115,7 @@ const DeviceActivation = () => {
         </div>
 
         <div className="space-y-4 mt-8">
+          
           <div>
             <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">User ID</label>
             <div className="relative">
@@ -125,12 +132,30 @@ const DeviceActivation = () => {
             </div>
           </div>
 
+         
+          <div>
+            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Activation Auth Code</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Lock className="h-4 w-4 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                value={authCode}
+                onChange={(e) => setAuthCode(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg pl-10 pr-4 py-3 text-gray-800 bg-gray-50/50 focus:bg-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#005f5f]/20 focus:border-[#005f5f]"
+                placeholder="Enter 9-digit Code"
+              />
+            </div>
+          </div>
+
           <div className="pt-6 flex flex-col items-center gap-4">
             <button 
               onClick={handleGenerate}
-              disabled={isLoading}
+              
+              disabled={isLoading || !userId || !authCode} 
               className={`w-full text-white font-bold py-3 rounded-lg shadow-md transition-all duration-200 transform ${
-                isLoading 
+                isLoading || !userId || !authCode
                   ? 'bg-gray-400 cursor-not-allowed' 
                   : 'bg-gradient-to-r from-[#005f5f] to-[#004c4c] hover:from-[#004c4c] hover:to-[#003939] hover:-translate-y-0.5 hover:shadow-lg'
               }`}
@@ -163,7 +188,6 @@ const DeviceActivation = () => {
             </div>
             <p className="mt-6 text-sm font-bold text-gray-800">Scan with eToken App</p>
             
-            {/* Visual Progress Bar */}
             <div className="w-48 h-1.5 bg-gray-100 rounded-full mt-4 overflow-hidden shadow-inner">
               <div 
                 className={`h-full transition-all duration-1000 ease-linear ${timeLeft <= 5 ? 'bg-red-500' : 'bg-[#005f5f]'}`}
