@@ -212,6 +212,7 @@ const DeviceActivation = () => {
 const TransactionSigning = () => {
   const [step, setStep] = useState('form'); 
   const [formData, setFormData] = useState({
+    user_id: '', 
     origin: '111111111',
     beneficiary: '111111111',
     name: 'Iname fname',
@@ -245,6 +246,7 @@ const TransactionSigning = () => {
     setGeneratedImage(null);
 
     try {
+      
       const response = await fetch('https://maxut-app.vercel.app/api/sign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -279,8 +281,9 @@ const TransactionSigning = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          user_id: formData.user_id,  
           signature: signatureCode,
-          datafield: [
+          datafields: [               
             String(formData.origin),
             String(formData.beneficiary),
             String(formData.name),
@@ -291,11 +294,12 @@ const TransactionSigning = () => {
 
       const data = await response.json();
 
-      if (data.respCode === "0") {
+      
+      if (data.respCode === "0" || data.ret_code === 0 || data.ret_code === "0") {
         setValidationResult('success');
       } else {
         setValidationResult('failed');
-        setError(data.respMsg || "Validation Failed");
+        setError(data.respMsg || data.ret_msg || "Validation Failed");
       }
     } catch (err) {
       console.error(err);
@@ -306,8 +310,9 @@ const TransactionSigning = () => {
     }
   };
 
+
   const handleClear = () => {
-    setFormData({ origin: '', beneficiary: '', name: '', amount: '' });
+    setFormData({ user_id: '', origin: '', beneficiary: '', name: '', amount: '' });
     setGeneratedImage(null);
     setError(null);
     setStep('form');
@@ -332,7 +337,7 @@ const TransactionSigning = () => {
               <input
                 type="text"
                 value={signatureCode}
-                onChange={(e) => setSignatureCode(e.target.value.replace(/\D/g, ''))} // Only allow numbers
+                onChange={(e) => setSignatureCode(e.target.value.replace(/\D/g, ''))}
                 placeholder="6-digit code"
                 maxLength={6}
                 className="flex-1 border border-gray-200 rounded-lg px-4 py-3 text-center text-xl tracking-[0.5em] font-mono text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#005f5f]/20 focus:border-[#005f5f] bg-gray-50/50"
@@ -367,7 +372,6 @@ const TransactionSigning = () => {
     );
   }
 
-  // Define icons for inputs dynamically
   const getInputIcon = (fieldName) => {
     switch(fieldName) {
       case 'origin': return <CreditCard className="h-4 w-4 text-gray-400" />;
@@ -386,6 +390,28 @@ const TransactionSigning = () => {
           <p className="text-gray-500 text-sm mt-1">Generate a secure visual signature for funds transfer.</p>
         </div>
         <div className="space-y-4 mt-6">
+          
+          {/* NEW: Explicit User ID Field for Transaction */}
+          <div>
+            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Activated User ID</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <User className="h-4 w-4 text-[#005f5f]" />
+              </div>
+              <input
+                name="user_id"
+                value={formData.user_id}
+                onChange={handleChange}
+                disabled={step === 'display'}
+                className="w-full border border-[#005f5f]/30 rounded-lg pl-10 pr-4 py-2.5 text-gray-800 bg-[#005f5f]/5 focus:bg-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#005f5f]/20 focus:border-[#005f5f] disabled:opacity-60 font-medium"
+                placeholder="Enter the ID you just activated"
+              />
+            </div>
+          </div>
+
+          <hr className="border-gray-100 my-4" />
+
+          {/* Existing mapped transaction fields */}
           {['origin', 'beneficiary', 'name', 'amount'].map((field) => (
             <div key={field}>
               <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">{field.replace('_', ' ')}</label>
@@ -407,9 +433,10 @@ const TransactionSigning = () => {
              <button onClick={handleClear} className="px-6 bg-white border border-gray-200 text-gray-600 font-bold py-2.5 rounded-lg hover:bg-gray-50 transition-colors shadow-sm">Clear</button>
             <button 
               onClick={handleSignReal}
-              disabled={isLoading || step === 'display'}
+              // Button is disabled if user_id is empty
+              disabled={isLoading || step === 'display' || !formData.user_id}
               className={`flex-1 text-white font-bold py-2.5 rounded-lg shadow-md transition-all duration-200 transform ${
-                isLoading 
+                isLoading || !formData.user_id
                   ? 'bg-gray-400 cursor-not-allowed' 
                   : 'bg-gradient-to-r from-[#005f5f] to-[#004c4c] hover:from-[#004c4c] hover:to-[#003939] hover:-translate-y-0.5 hover:shadow-lg'
               }`}
@@ -458,6 +485,7 @@ const TransactionSigning = () => {
     </div>
   );
 };
+
 
 // --- Main App Component ---
 export default function App() {

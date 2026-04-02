@@ -52,11 +52,11 @@ async function getAuthToken() {
 // --- ROUTE A: ACTIVATION ---
 app.post('/api/activate', async (req, res) => {
   try {
-    // 1. Extract BOTH fields from the frontend request
+   
     const { user_id, auth_code } = req.body;
     const token = await getAuthToken();
 
-    // 2. Map them dynamically to the payload
+    
     const payload = {
       user_id: user_id,
       auth_code: auth_code, 
@@ -86,10 +86,10 @@ app.post('/api/activate', async (req, res) => {
 // --- ROUTE B: TRANSACTION SIGNING (GENERATION) ---
 app.post('/api/sign', async (req, res) => {
   try {
-    const { origin, beneficiary, name, amount } = req.body;
+   
+    const { user_id, origin, beneficiary, name, amount } = req.body;
     const token = await getAuthToken();
 
-    
     const dataArray = [
       String(origin),      
       String(beneficiary), 
@@ -97,9 +97,8 @@ app.post('/api/sign', async (req, res) => {
       String(amount)       
     ];
 
-    
     const transactionPayload = {
-      user_id: "tdsdavid",  
+      user_id: user_id, 
       datafields: dataArray,      
       cronto_type: "Transaction", 
       fingerprint: "test111111111111" 
@@ -109,7 +108,7 @@ app.post('/api/sign', async (req, res) => {
     // 🛑 DEBUG LOG: EXACT OUTGOING PAYLOAD
     // ==========================================
     console.log("\n================================================");
-    console.log("🚀 EXACT JSON PAYLOAD LEAVING NODE.JS SERVER:");
+    console.log("🚀 EXACT TRANSACTION PAYLOAD LEAVING NODE.JS:");
     console.log("================================================");
     console.log(JSON.stringify(transactionPayload, null, 2));
     console.log("================================================\n");
@@ -129,17 +128,25 @@ app.post('/api/sign', async (req, res) => {
 // --- ROUTE C: SIGNATURE VALIDATION ---
 app.post('/api/validate-signature', async (req, res) => {
   try {
-    const { signature, datafields } = req.body;
+    // 1. Extract the user_id dynamically from the frontend alongside the signature
+    const { user_id, signature, datafields } = req.body; 
     const token = await getAuthToken();
 
-    
+    // 2. Map them dynamically to the validation payload
     const validationPayload = {
-      user_id: "111111111", 
+      user_id: user_id,       // Now checking the actual user!
       signature: signature,
-      datafield: datafields 
+      datafields: datafields  // Pluralized to match the API standard
     };
 
-    console.log(`3. Validating signature: ${signature}...`);
+    // ==========================================
+    // 🛑 DEBUG LOG: EXACT VALIDATION PAYLOAD
+    // ==========================================
+    console.log("\n================================================");
+    console.log("🛡️ EXACT VALIDATION PAYLOAD LEAVING NODE.JS:");
+    console.log("================================================");
+    console.log(JSON.stringify(validationPayload, null, 2));
+    console.log("================================================\n");
 
     const response = await axios.post(VALIDATE_ENDPOINT, validationPayload, {
       headers: { 
@@ -148,13 +155,14 @@ app.post('/api/validate-signature', async (req, res) => {
       }
     });
 
-    console.log("Validation Result:", response.data.respMsg);
+    console.log("Validation API Response:", JSON.stringify(response.data, null, 2));
     res.json(response.data);
 
   } catch (error) {
     handleError(res, error);
   }
 });
+
 
 // ==========================================
 // 4. UTILS & SERVER
