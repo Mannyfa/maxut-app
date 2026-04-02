@@ -111,7 +111,7 @@ const DeviceActivation = () => {
       <div className="flex-1 space-y-6 pr-6">
         <div>
           <h2 className="text-xl font-bold text-gray-800">Device Activation</h2>
-          <p className="text-gray-500 text-sm mt-1">Bind a physical or soft token to a user ID.</p>
+          <p className="text-gray-500 text-sm mt-1">Bind a physical token or soft token to a user ID.</p>
         </div>
 
         <div className="space-y-4 mt-8">
