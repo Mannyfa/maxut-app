@@ -91,8 +91,9 @@ app.post('/api/sign', async (req, res) => {
     const token = await getAuthToken();
 
     const dataArray = [
-      String(origin),      
-      String(beneficiary), 
+      
+      String(beneficiary),
+      String(origin),        
       String(name),        
       String(amount)       
     ];
