@@ -22,6 +22,8 @@ const AUTH_PAYLOAD = {
   password: "password1"
 };
 
+const transactionStore = new Map();
+
 // ==========================================
 // 2. HELPER: GET TOKEN
 // ==========================================
@@ -83,43 +85,52 @@ app.post('/api/activate', async (req, res) => {
     handleError(res, error);
   }
 });
+
 // --- ROUTE B: TRANSACTION SIGNING (GENERATION) ---
 app.post('/api/sign', async (req, res) => {
   try {
-   
     const { user_id, origin, beneficiary, name, amount } = req.body;
     const token = await getAuthToken();
 
+    // ✅ Validate input early
+    if (!user_id || !origin || !beneficiary || !name || !amount) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
     const dataArray = [
-      
       String(beneficiary),
-      String(origin),        
-      String(name),        
-      String(amount)       
+      String(origin),
+      String(name),
+      String(amount)
     ];
 
+    // ✅ Store datafields for later validation
+    transactionStore.set(user_id, dataArray);
+
     const transactionPayload = {
-      user_id: user_id, 
-      datafields: dataArray,      
-      cronto_type: "Transaction", 
-      fingerprint: "test111111111111" 
+      user_id,
+      datafields: dataArray,
+      cronto_type: "Transaction",
+      fingerprint: "test111111111111"
     };
 
-    // ==========================================
-    // 🛑 DEBUG LOG: EXACT OUTGOING PAYLOAD
-    // ==========================================
     console.log("\n================================================");
-    console.log("🚀 EXACT TRANSACTION PAYLOAD LEAVING NODE.JS:");
-    console.log("================================================");
+    console.log("🚀 TRANSACTION PAYLOAD:");
     console.log(JSON.stringify(transactionPayload, null, 2));
     console.log("================================================\n");
 
     const response = await axios.post(API_ENDPOINT, transactionPayload, {
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
     });
 
-    console.log("> Success! Transaction Signature received.");
-    res.json(response.data);
+    // ✅ Optionally return datafields to frontend too
+    res.json({
+      ...response.data,
+      datafields: dataArray
+    });
 
   } catch (error) {
     handleError(res, error);
@@ -129,41 +140,47 @@ app.post('/api/sign', async (req, res) => {
 // --- ROUTE C: SIGNATURE VALIDATION ---
 app.post('/api/validate-signature', async (req, res) => {
   try {
-    // 1. Extract the user_id dynamically from the frontend alongside the signature
-    const { user_id, signature, datafields } = req.body; 
+    const { user_id, signature } = req.body;
     const token = await getAuthToken();
 
-    // 2. Map them dynamically to the validation payload
+    // ✅ Retrieve original datafields
+    const storedDatafields = transactionStore.get(user_id);
+
+    if (!storedDatafields) {
+      return res.status(400).json({
+        error: "No transaction data found for this user. Sign transaction first."
+      });
+    }
+
     const validationPayload = {
-      user_id: user_id,       // Now checking the actual user!
-      signature: signature,
-      datafields: datafields  // Pluralized to match the API standard
+      user_id,
+      signature,
+      datafields: storedDatafields // ✅ EXACT SAME DATA
     };
 
-    // ==========================================
-    // 🛑 DEBUG LOG: EXACT VALIDATION PAYLOAD
-    // ==========================================
     console.log("\n================================================");
-    console.log("🛡️ EXACT VALIDATION PAYLOAD LEAVING NODE.JS:");
-    console.log("================================================");
+    console.log("🛡️ VALIDATION PAYLOAD:");
     console.log(JSON.stringify(validationPayload, null, 2));
     console.log("================================================\n");
 
     const response = await axios.post(VALIDATE_ENDPOINT, validationPayload, {
-      headers: { 
-        'Authorization': `Bearer ${token}`, 
-        'Content-Type': 'application/json' 
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
       }
     });
 
-    console.log("Validation API Response:", JSON.stringify(response.data, null, 2));
+    console.log("Validation API Response:", response.data);
+
+    // ✅ Optional: clean up after validation
+    transactionStore.delete(user_id);
+
     res.json(response.data);
 
   } catch (error) {
     handleError(res, error);
   }
 });
-
 
 // ==========================================
 // 4. UTILS & SERVER
