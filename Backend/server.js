@@ -87,12 +87,13 @@ app.post('/api/activate', async (req, res) => {
 });
 
 // --- ROUTE B: TRANSACTION SIGNING (GENERATION) ---
+
+
 app.post('/api/sign', async (req, res) => {
   try {
     const { user_id, origin, beneficiary, name, amount } = req.body;
     const token = await getAuthToken();
 
-    // ✅ Validate input early
     if (!user_id || !origin || !beneficiary || !name || !amount) {
       return res.status(400).json({ error: "Missing required fields" });
     }
@@ -104,12 +105,12 @@ app.post('/api/sign', async (req, res) => {
       String(amount)
     ];
 
-    // ✅ Store datafields for later validation
+    
     transactionStore.set(user_id, dataArray);
 
     const transactionPayload = {
       user_id,
-      datafields: dataArray,
+      datafields: dataArray,   
       cronto_type: "Transaction",
       fingerprint: "test111111111111"
     };
@@ -126,10 +127,9 @@ app.post('/api/sign', async (req, res) => {
       }
     });
 
-    // ✅ Optionally return datafields to frontend too
     res.json({
       ...response.data,
-      datafields: dataArray
+      datafield: dataArray 
     });
 
   } catch (error) {
@@ -137,25 +137,25 @@ app.post('/api/sign', async (req, res) => {
   }
 });
 
+
 // --- ROUTE C: SIGNATURE VALIDATION ---
 app.post('/api/validate-signature', async (req, res) => {
   try {
     const { user_id, signature } = req.body;
     const token = await getAuthToken();
 
-    // ✅ Retrieve original datafields
-    const storedDatafields = transactionStore.get(user_id);
+    const storedDatafield = transactionStore.get(user_id);
 
-    if (!storedDatafields) {
+    if (!storedDatafield) {
       return res.status(400).json({
-        error: "No transaction data found for this user. Sign transaction first."
+        error: "No transaction data found. Sign first."
       });
     }
 
     const validationPayload = {
       user_id,
       signature,
-      datafields: storedDatafields // ✅ EXACT SAME DATA
+      datafield: storedDatafield  
     };
 
     console.log("\n================================================");
@@ -172,7 +172,7 @@ app.post('/api/validate-signature', async (req, res) => {
 
     console.log("Validation API Response:", response.data);
 
-    // ✅ Optional: clean up after validation
+    // optional cleanup
     transactionStore.delete(user_id);
 
     res.json(response.data);
@@ -181,6 +181,8 @@ app.post('/api/validate-signature', async (req, res) => {
     handleError(res, error);
   }
 });
+
+
 
 // ==========================================
 // 4. UTILS & SERVER

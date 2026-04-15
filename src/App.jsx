@@ -181,7 +181,11 @@ const DeviceActivation = () => {
           <div className="flex flex-col items-center w-full animate-in zoom-in-95 duration-500">
             <div className={`p-4 bg-white border border-gray-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-1000 ${timeLeft === 0 ? 'opacity-30 grayscale' : 'opacity-100'}`}>
               <img 
-                src={`data:image/png;base64,${generatedImage}`} 
+  src={
+    generatedImage.startsWith("data:image")
+      ? generatedImage
+      : `data:image/png;base64,${generatedImage}`
+  }
                 className="w-56 h-56 object-contain" 
                 alt="Activation Token"
               />
@@ -241,35 +245,58 @@ const TransactionSigning = () => {
   };
 
   const handleSignReal = async () => {
-    setIsLoading(true);
-    setError(null);
-    setGeneratedImage(null);
+  setIsLoading(true);
+  setError(null);
+  setGeneratedImage(null);
 
-    try {
-      
-      const response = await fetch('https://maxut-app.vercel.app/api/sign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
+  try {
+    const response = await fetch('https://maxut-app.vercel.app/api/sign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData),
+    });
 
-      const data = await response.json();
-
-      if (data.ret_code !== 0 && data.ret_code !== "0") {
-        throw new Error(data.ret_msg || "An error occurred during signing");
-      }
-
-      setGeneratedImage(data.cronto_image || data.respMsg);
-      setTimeLeft(30);
-      setStep('display');
-
-    } catch (err) {
-      console.error(err);
-      setError(err.message || "Connection to backend failed");
-    } finally {
-      setIsLoading(false);
+    // ✅ Check HTTP status
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("❌ HTTP ERROR:", errorText);
+      throw new Error(`Server error: ${response.status}`);
     }
-  };
+
+    const data = await response.json();
+
+    console.log("✅ FULL RESPONSE:", data);
+
+    // ✅ Check API-level error
+    if (data.respCode && data.respCode !== "0") {
+      throw new Error(data.respMsg || "Signing failed");
+    }
+
+    // ✅ STRICT: Only accept actual image
+    if (!data.cronto_image) {
+      console.error("❌ No cronto_image returned:", data);
+      throw new Error("No signature image returned from API");
+    }
+
+    // ✅ Set ONLY valid image
+    setGeneratedImage(data.cronto_image);
+
+    setTimeLeft(30);
+    setStep('display');
+
+  } catch (err) {
+    console.error("❌ ERROR DETAILS:", err);
+
+    setError(
+      err.message || 
+      "Connection to backend failed"
+    );
+
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const handleValidateSignature = async () => {
     setIsLoading(true);
@@ -458,7 +485,12 @@ const TransactionSigning = () => {
         ) : (
           <div className="flex flex-col items-center w-full animate-in zoom-in-95 duration-500">
             <div className={`p-4 bg-white border border-gray-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-1000 ${timeLeft === 0 ? 'opacity-30 grayscale' : 'opacity-100'}`}>
-              <img src={`data:image/png;base64,${generatedImage}`} className="w-56 h-56 object-contain" alt="Signature" />
+              <img 
+  src={
+    generatedImage.startsWith("data:image")
+      ? generatedImage
+      : `data:image/png;base64,${generatedImage}`
+  } className="w-56 h-56 object-contain" alt="Signature" />
             </div>
             
             <div className="w-48 h-1.5 bg-gray-100 rounded-full mt-6 overflow-hidden shadow-inner">
